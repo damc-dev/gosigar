@@ -37,6 +37,7 @@ type Watcher struct {
 	Exit     chan *ProcEventExit // Exit events are sent on this channel
 	done     chan bool           // Used to stop the readEvents() goroutine
 	isClosed bool                // Set to true when Close() is first called
+	watchAll *watch              // Configures to watch for all process ids
 }
 
 // Initialize event listener and channels
@@ -55,6 +56,7 @@ func NewWatcher() (*Watcher, error) {
 		Exit:     make(chan *ProcEventExit),
 		Error:    make(chan error),
 		done:     make(chan bool, 1),
+		watchAll: &watch{flags: 0},
 	}
 
 	go w.readEvents()
@@ -106,6 +108,26 @@ func (w *Watcher) Watch(pid int, flags uint32) error {
 		}
 		w.watches[pid] = &watch{flags: flags}
 	}
+
+	return nil
+}
+
+func (w *Watcher) WatchAll(flags uint32) error {
+	if w.isClosed {
+		return errors.New("psnotify watcher is closed")
+	}
+
+	w.watchAll = &watch{flags: flags}
+
+	return nil
+}
+
+func (w *Watcher) RemoveWatchAll(flags uint32) error {
+	if w.isClosed {
+		return errors.New("psnotify watcher is closed")
+	}
+
+	w.watchAll = &watch{}
 
 	return nil
 }

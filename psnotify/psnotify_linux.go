@@ -140,8 +140,17 @@ func (w *Watcher) readEvents() {
 
 // Internal helper to check if pid && event is being watched
 func (w *Watcher) isWatching(pid int, event uint32) bool {
-	if watch, ok := w.watches[pid]; ok {
+	if w.isWatchingAll(event) {
+		return true
+	} else if watch, ok := w.watches[pid]; ok {
 		return (watch.flags & event) == event
+	}
+	return false
+}
+
+func (w *Watcher) isWatchingAll(event uint32) bool {
+	if (w.watchAll.flags & event) == event {
+		return true
 	}
 	return false
 }
@@ -164,7 +173,7 @@ func (w *Watcher) handleEvent(data []byte) {
 		ppid := int(event.ParentTgid)
 		pid := int(event.ChildTgid)
 
-		if w.isWatching(ppid, PROC_EVENT_EXEC) {
+		if !w.isWatchingAll(PROC_EVENT_EXEC) && w.isWatching(ppid, PROC_EVENT_EXEC) {
 			// follow forks
 			watch, _ := w.watches[ppid]
 			w.Watch(pid, watch.flags)
